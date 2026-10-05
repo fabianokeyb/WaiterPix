@@ -1,0 +1,1362 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pix THBF">
+<meta name="theme-color" content="#ffffff">
+<title>Pix THBF</title>
+<style>
+:root{--bg:#fff;--fg:#15171a;--mut:#6b7280;--acc:#0b8f7a;--bd:#e3e6ea;--soft:#f4f6f8;--zero:#b4b9c0;--err:#c0392b;color-scheme:light}
+:root[data-theme="dark"]{--bg:#0f1114;--fg:#e9ecef;--mut:#9aa1a9;--acc:#16b89c;--bd:#2a2f36;--soft:#1a1e23;--zero:#4a5058;--err:#ff6b5b;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--fg);transition:background .25s,color .25s}
+body{font:16px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+
+/* Telas: só a ativa existe no layout. A entrada anima apenas opacity e
+   transform, que o navegador resolve no compositor (sem reflow nem repaint). */
+.tela{display:none;max-width:440px;margin:0 auto;animation:entra .2s cubic-bezier(.2,.7,.3,1) both}
+body[data-tela="atendente"] #atendente,body[data-tela="config"] #config{display:block}
+body[data-tela="cliente"] #cliente{display:flex;flex-direction:column;align-items:center;text-align:center}
+@keyframes entra{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tela{animation:none}}
+
+.topo{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.acoes{display:flex;gap:8px;flex:none}
+.loja{font-size:20px;font-weight:700}
+.sub{color:var(--mut);font-size:14px;margin-bottom:18px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
+.max{float:right;font-weight:600}
+
+button{width:100%;padding:15px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-size:17px;font-weight:700;cursor:pointer;-webkit-appearance:none;appearance:none}
+button.sec{background:var(--bg);color:var(--fg);border:1.5px solid var(--bd);font-size:15px}
+button.link{background:none;color:var(--mut);font-size:15px;font-weight:600;padding:14px}
+button:disabled{opacity:.35;cursor:default}
+button.pill{width:auto;flex:none;padding:8px 12px;font-size:13px;font-weight:600;border-radius:999px;background:var(--soft);color:var(--fg);border:1.5px solid var(--bd)}
+button.pill.icon{width:38px;height:38px;padding:0;font-size:18px;line-height:35px}
+.btns{display:flex;gap:10px;width:100%;margin-top:10px}
+.btns button{flex:1}
+
+.pdv{display:flex;margin:-6px 0 16px;border:1.5px solid var(--bd);border-radius:10px;overflow:hidden}
+.pdv button{flex:1;border-radius:0;background:var(--bg);color:var(--mut);font-size:15px;padding:10px;border:0}
+.pdv button+button{border-left:1.5px solid var(--bd)}
+.pdv button.on{background:var(--acc);color:#fff}
+
+.campo{position:relative}
+#valor{width:100%;font-size:44px;font-weight:800;padding:12px 56px;border:2px solid var(--bd);border-radius:14px;text-align:center;color:inherit;background:var(--soft);font-variant-numeric:tabular-nums;caret-color:var(--acc);transition:color .15s,border-color .15s;-webkit-appearance:none;appearance:none}
+#valor:focus{outline:none;border-color:var(--acc)}
+#valor.zero{color:var(--zero)}
+#valor:not(.zero){border-color:var(--acc);background:var(--bg)}
+#limpar{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:40px;height:40px;padding:0;border-radius:50%;background:var(--soft);color:var(--mut);font-size:18px;line-height:37px;border:1.5px solid var(--bd)}
+#erro{color:var(--err);font-size:14px;text-align:center;min-height:20px;margin-top:4px}
+
+.preview{display:flex;flex-direction:column;align-items:center;margin:8px 0 4px}
+.qrwrap{position:relative;width:min(58vw,220px);aspect-ratio:1}
+.qrwrap canvas{width:100%;height:100%;image-rendering:pixelated;transition:opacity .15s}
+.qrwrap .vazio{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border:2px dashed var(--bd);border-radius:12px;color:var(--mut);font-size:14px;padding:16px;text-align:center}
+.preview.ok .vazio{display:none}
+.preview:not(.ok) canvas{opacity:0}
+.live{font-size:12px;color:var(--acc);font-weight:600;margin-top:6px;min-height:16px}
+#apresentar{margin-top:10px}
+
+.cc{width:100%;background:var(--soft);border-radius:12px;padding:12px;text-align:left;margin-top:12px}
+.cc-t{font-size:12px;color:var(--mut);margin-bottom:4px}
+.code{font:12px/1.45 ui-monospace,Menlo,monospace;word-break:break-all;-webkit-user-select:all;user-select:all;min-height:1.45em}
+.ref{font:600 13px ui-monospace,Menlo,monospace;word-break:break-all}
+.cfg{font-size:13px;color:var(--mut);background:var(--soft);border-radius:10px;padding:10px 12px;margin-top:12px;line-height:1.6}
+
+#fechar{display:none;position:fixed;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));width:44px;height:44px;padding:0;border-radius:50%;background:var(--soft);color:var(--fg);font-size:22px;line-height:44px;font-weight:600;z-index:2}
+body[data-tela="cliente"] #fechar{display:block}
+.tag{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);margin-top:6px}
+.cv{font-size:min(46px,6vh);font-weight:800;margin:2px 0 8px;font-variant-numeric:tabular-nums}
+#bigqr{width:min(76vw,40vh,330px);height:auto;image-rendering:pixelated}
+.dados{width:100%;margin:14px 0 0;border:1px solid var(--bd);border-radius:12px;overflow:hidden;text-align:left}
+.dados div{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;border-top:1px solid var(--bd)}
+.dados div:first-child{border-top:0}
+.dados dt{color:var(--mut);font-size:14px;flex:none}
+.dados dd{margin:0;font-weight:700;text-align:right;word-break:break-all}
+.dados dd.ref{font-size:12px}
+.aviso{font-size:13px;color:var(--mut);margin:10px 4px 0}
+
+.form h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);margin:22px 0 4px}
+.form label{margin:12px 0 6px}
+.form input,.form select,#pinIn{width:100%;padding:12px;border:1.5px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg);font:inherit;font-size:16px;-webkit-appearance:none;appearance:none}
+.form input:focus,.form select:focus,#pinIn:focus{outline:none;border-color:var(--acc)}
+.form .row{display:grid;grid-template-columns:118px 1fr;gap:8px}
+.form small{color:var(--mut);font-weight:400}
+.form .ex{font-size:13px;color:var(--mut);background:var(--soft);border-radius:10px;padding:10px 12px;margin-top:12px;line-height:1.7}
+.form .ex code{color:var(--fg);font:600 12px ui-monospace,Menlo,monospace;word-break:break-all}
+.msg{color:var(--err);font-size:14px;min-height:20px;margin:12px 0 4px;text-align:center}
+.msg.info{color:var(--mut)}
+#pinOk{margin-top:12px}
+</style>
+</head>
+<body data-tela="atendente">
+
+<section id="atendente" class="tela">
+  <div class="topo">
+    <div>
+      <div class="loja" id="lojaNome"></div>
+      <div class="sub">Cobrança Pix</div>
+    </div>
+    <div class="acoes">
+      <button id="tema" class="pill" type="button" aria-label="Alternar modo escuro">☾ Escuro</button>
+      <button id="engrenagem" class="pill icon" type="button" aria-label="Configurações">⚙</button>
+    </div>
+  </div>
+  <div class="pdv" id="pdv" role="group" aria-label="Caixa"></div>
+  <label for="valor">Valor da compra <span class="max" id="maxInfo"></span></label>
+  <div class="campo">
+    <input id="valor" inputmode="numeric" autocomplete="off" value="R$ 0,00" aria-label="Valor da compra">
+    <button id="limpar" type="button" aria-label="Apagar valor" hidden>✕</button>
+  </div>
+  <div id="erro"></div>
+
+  <div class="preview" id="preview">
+    <div class="qrwrap">
+      <canvas id="qr" width="1" height="1"></canvas>
+      <div class="vazio">Digite o valor para gerar o QR Code</div>
+    </div>
+    <div class="live" id="live"></div>
+  </div>
+
+  <button id="apresentar" disabled>Apresentar ao cliente</button>
+  <div class="btns">
+    <button class="sec" id="copiar" disabled>Copiar copia e cola</button>
+    <button class="sec" id="png" disabled>Baixar PNG</button>
+  </div>
+
+  <div class="cc">
+    <div class="cc-t">Mensagem</div>
+    <div class="ref" id="ref">—</div>
+    <div class="cc-t" style="margin-top:10px">Identificador</div>
+    <div class="ref" id="refId">—</div>
+    <div class="cc-t" style="margin-top:10px">Pix copia e cola</div>
+    <div class="code" id="code"></div>
+  </div>
+  <div class="cfg">
+    Recebedor no app: <b data-f="nomeApp"></b><br>
+    <span data-f="tipo"></span>: <b data-f="chave"></b><br>
+    Banco: <b data-f="banco"></b>
+  </div>
+</section>
+
+<button id="fechar" aria-label="Voltar">✕</button>
+<section id="cliente" class="tela">
+  <div class="tag">Pagamento via Pix</div>
+  <div class="cv" id="cv"></div>
+  <canvas id="bigqr" width="1" height="1"></canvas>
+  <dl class="dados">
+    <div><dt>Recebedor</dt><dd data-f="nomeApp"></dd></div>
+    <div><dt data-f="tipo"></dt><dd data-f="chave"></dd></div>
+    <div><dt>Banco</dt><dd data-f="banco"></dd></div>
+    <div><dt>Mensagem</dt><dd class="ref" id="bigref"></dd></div>
+  </dl>
+  <p class="aviso" id="aviso"></p>
+  <div class="cc">
+    <div class="cc-t">Pix copia e cola</div>
+    <div class="code" id="bigcode"></div>
+  </div>
+  <div class="btns">
+    <button id="copiar2">Copiar código</button>
+    <button id="enviar" class="sec" hidden>Enviar</button>
+  </div>
+</section>
+
+<section id="config" class="tela">
+  <div class="topo">
+    <div>
+      <div class="loja">Configurações</div>
+      <div class="sub">Recebedor, limite e controle</div>
+    </div>
+    <button id="cfgFechar" class="pill icon" type="button" aria-label="Fechar">✕</button>
+  </div>
+
+  <div id="lock" hidden>
+    <label for="pinIn">PIN de acesso</label>
+    <input id="pinIn" type="password" inputmode="numeric" autocomplete="off" maxlength="8">
+    <button id="pinOk" type="button">Entrar</button>
+    <div class="msg" id="pinMsg"></div>
+  </div>
+
+  <form id="cfgForm" class="form" novalidate autocomplete="off">
+    <h3>Recebedor</h3>
+    <label for="cChave">Chave Pix</label>
+    <div class="row">
+      <select id="cTipo" aria-label="Tipo de chave">
+        <option value="doc">CPF/CNPJ</option>
+        <option value="tel">Celular</option>
+        <option value="email">E-mail</option>
+        <option value="evp">Aleatória</option>
+      </select>
+      <input id="cChave" spellcheck="false">
+    </div>
+    <label for="cNome">Nome como aparece no app do cliente</label>
+    <input id="cNome" maxlength="25">
+    <label for="cBanco">Banco</label>
+    <input id="cBanco" maxlength="30">
+
+    <h3>Controle</h3>
+    <label for="cMax">Valor máximo por cobrança (R$)</label>
+    <input id="cMax" inputmode="decimal">
+    <label for="cPid">Prefixo do identificador <small>(letras e números)</small></label>
+    <input id="cPid" maxlength="8" spellcheck="false">
+    <label for="cPmsg">Prefixo da mensagem <small>(letras, números e hífen)</small></label>
+    <input id="cPmsg" maxlength="12" spellcheck="false">
+    <div class="ex">
+      Exemplo para R$ 50,00:<br>
+      Mensagem: <code id="exMsg">—</code><br>
+      Identificador: <code id="exId">—</code>
+    </div>
+
+    <h3>Segurança</h3>
+    <label for="cPin">Novo PIN <small>(4 a 8 dígitos; vazio mantém o atual)</small></label>
+    <input id="cPin" type="password" inputmode="numeric" maxlength="8">
+
+    <div class="msg" id="cfgMsg"></div>
+    <button type="submit">Salvar</button>
+    <button type="button" class="link" id="cfgReset">Restaurar padrão</button>
+  </form>
+</section>
+
+<script>
+'use strict'
+
+/* ============================== QR CODE ============================== */
+
+/**
+ * Encoder QR Code mínimo: modo byte, correção de erro nível M, versões 1–40,
+ * escolha automática de máscara por penalidade (ISO/IEC 18004).
+ * Algoritmo baseado na implementação de referência do Project Nayuki (MIT).
+ */
+const QR = (() => {
+  /** Codewords de ECC por bloco, nível M, indexado por versão. */
+  const ECC_M = [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28]
+  /** Quantidade de blocos de ECC, nível M, indexado por versão. */
+  const BLK_M = [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49]
+
+  /**
+   * Multiplicação no corpo GF(2^8) com polinômio redutor 0x11D.
+   * @param {number} x
+   * @param {number} y
+   * @returns {number}
+   */
+  const gfMul = (x, y) => {
+    let z = 0
+    for (let i = 7; i >= 0; i--) {
+      z = (z << 1) ^ ((z >>> 7) * 0x11d)
+      z ^= ((y >>> i) & 1) * x
+    }
+    return z
+  }
+
+  /**
+   * Polinômio gerador Reed-Solomon de grau `degree`.
+   * @param {number} degree
+   * @returns {number[]}
+   */
+  const rsDivisor = degree => {
+    const r = new Array(degree).fill(0)
+    r[degree - 1] = 1
+    let root = 1
+    for (let i = 0; i < degree; i++) {
+      for (let j = 0; j < degree; j++) {
+        r[j] = gfMul(r[j], root)
+        if (j + 1 < degree) r[j] ^= r[j + 1]
+      }
+      root = gfMul(root, 2)
+    }
+    return r
+  }
+
+  /**
+   * Resto da divisão polinomial (codewords de correção).
+   * @param {number[]} data
+   * @param {number[]} div
+   * @returns {number[]}
+   */
+  const rsRemainder = (data, div) => {
+    const r = div.map(() => 0)
+    for (const b of data) {
+      const f = b ^ r.shift()
+      r.push(0)
+      div.forEach((c, i) => { r[i] ^= gfMul(c, f) })
+    }
+    return r
+  }
+
+  /**
+   * Módulos disponíveis para dados+ECC numa versão.
+   * @param {number} v versão
+   * @returns {number}
+   */
+  const rawModules = v => {
+    let r = (16 * v + 128) * v + 64
+    if (v >= 2) {
+      const n = Math.floor(v / 7) + 2
+      r -= (25 * n - 10) * n - 55
+      if (v >= 7) r -= 36
+    }
+    return r
+  }
+
+  /**
+   * Codewords de dados (sem ECC) disponíveis no nível M.
+   * @param {number} v versão
+   * @returns {number}
+   */
+  const dataCodewords = v => Math.floor(rawModules(v) / 8) - ECC_M[v] * BLK_M[v]
+
+  /**
+   * Coordenadas centrais dos padrões de alinhamento.
+   * @param {number} v versão
+   * @returns {number[]}
+   */
+  const alignPositions = v => {
+    if (v === 1) return []
+    const n = Math.floor(v / 7) + 2
+    const step = Math.floor((v * 8 + n * 3 + 5) / (n * 4 - 4)) * 2
+    const out = [6]
+    for (let pos = v * 4 + 10; out.length < n; pos -= step) out.splice(1, 0, pos)
+    return out
+  }
+
+  const MASKS = [
+    (x, y) => (x + y) % 2 === 0,
+    (x, y) => y % 2 === 0,
+    (x, y) => x % 3 === 0,
+    (x, y) => (x + y) % 3 === 0,
+    (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0,
+    (x, y) => (x * y) % 2 + (x * y) % 3 === 0,
+    (x, y) => ((x * y) % 2 + (x * y) % 3) % 2 === 0,
+    (x, y) => ((x + y) % 2 + (x * y) % 3) % 2 === 0
+  ]
+
+  /**
+   * Gera a matriz de módulos do QR Code.
+   * @param {string} text conteúdo (codificado em UTF-8, modo byte)
+   * @returns {boolean[][]} matriz [y][x]; true = módulo escuro
+   */
+  const encode = text => {
+    const bytes = Array.from(new TextEncoder().encode(text))
+    let v = 1
+    while (v <= 40 && 4 + (v < 10 ? 8 : 16) + bytes.length * 8 > dataCodewords(v) * 8) v++
+    if (v > 40) throw new Error('Conteúdo grande demais para um QR Code')
+
+    const cap = dataCodewords(v) * 8
+    const bits = []
+    const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1) }
+    push(0b0100, 4)
+    push(bytes.length, v < 10 ? 8 : 16)
+    bytes.forEach(b => push(b, 8))
+    push(0, Math.min(4, cap - bits.length))
+    push(0, (8 - bits.length % 8) % 8)
+    for (let pad = 0xec; bits.length < cap; pad ^= 0xec ^ 0x11) push(pad, 8)
+    const data = []
+    for (let i = 0; i < bits.length; i += 8) data.push(bits.slice(i, i + 8).reduce((a, b) => (a << 1) | b, 0))
+
+    const nBlocks = BLK_M[v]
+    const eccLen = ECC_M[v]
+    const raw = Math.floor(rawModules(v) / 8)
+    const nShort = nBlocks - raw % nBlocks
+    const shortLen = Math.floor(raw / nBlocks)
+    const div = rsDivisor(eccLen)
+    const blocks = []
+    for (let i = 0, k = 0; i < nBlocks; i++) {
+      const dat = data.slice(k, k + shortLen - eccLen + (i < nShort ? 0 : 1))
+      k += dat.length
+      const ecc = rsRemainder(dat, div)
+      if (i < nShort) dat.push(0)
+      blocks.push(dat.concat(ecc))
+    }
+    const cw = []
+    for (let i = 0; i < blocks[0].length; i++) {
+      blocks.forEach((b, j) => {
+        if (i !== shortLen - eccLen || j >= nShort) cw.push(b[i])
+      })
+    }
+
+    const size = v * 4 + 17
+    const mod = Array.from({ length: size }, () => new Array(size).fill(false))
+    const fn = Array.from({ length: size }, () => new Array(size).fill(false))
+    const set = (x, y, d) => {
+      mod[y][x] = d
+      fn[y][x] = true
+    }
+
+    for (let i = 0; i < size; i++) {
+      set(6, i, i % 2 === 0)
+      set(i, 6, i % 2 === 0)
+    }
+    const finder = (cx, cy) => {
+      for (let dy = -4; dy <= 4; dy++) {
+        for (let dx = -4; dx <= 4; dx++) {
+          const x = cx + dx
+          const y = cy + dy
+          const d = Math.max(Math.abs(dx), Math.abs(dy))
+          if (x >= 0 && x < size && y >= 0 && y < size) set(x, y, d !== 2 && d !== 4)
+        }
+      }
+    }
+    finder(3, 3)
+    finder(size - 4, 3)
+    finder(3, size - 4)
+
+    const ap = alignPositions(v)
+    const na = ap.length
+    for (let i = 0; i < na; i++) {
+      for (let j = 0; j < na; j++) {
+        if ((i === 0 && j === 0) || (i === 0 && j === na - 1) || (i === na - 1 && j === 0)) continue
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) set(ap[i] + dx, ap[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1)
+        }
+      }
+    }
+
+    /** Desenha os 15 bits de formato (nível M = 00) para a máscara dada. */
+    const formatBits = mask => {
+      const d = mask
+      let r = d
+      for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537)
+      const b = ((d << 10) | r) ^ 0x5412
+      const bit = i => ((b >>> i) & 1) === 1
+      for (let i = 0; i <= 5; i++) set(8, i, bit(i))
+      set(8, 7, bit(6))
+      set(8, 8, bit(7))
+      set(7, 8, bit(8))
+      for (let i = 9; i < 15; i++) set(14 - i, 8, bit(i))
+      for (let i = 0; i < 8; i++) set(size - 1 - i, 8, bit(i))
+      for (let i = 8; i < 15; i++) set(8, size - 15 + i, bit(i))
+      set(8, size - 8, true)
+    }
+    formatBits(0)
+
+    if (v >= 7) {
+      let r = v
+      for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1f25)
+      const b = (v << 12) | r
+      for (let i = 0; i < 18; i++) {
+        const d = ((b >>> i) & 1) === 1
+        const a = size - 11 + i % 3
+        const c = Math.floor(i / 3)
+        set(a, c, d)
+        set(c, a, d)
+      }
+    }
+
+    let bi = 0
+    for (let right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5
+      const up = ((right + 1) & 2) === 0
+      for (let vert = 0; vert < size; vert++) {
+        for (let j = 0; j < 2; j++) {
+          const x = right - j
+          const y = up ? size - 1 - vert : vert
+          if (!fn[y][x] && bi < cw.length * 8) {
+            mod[y][x] = ((cw[bi >>> 3] >>> (7 - (bi & 7))) & 1) === 1
+            bi++
+          }
+        }
+      }
+    }
+
+    const applyMask = m => {
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          if (!fn[y][x] && MASKS[m](x, y)) mod[y][x] = !mod[y][x]
+        }
+      }
+    }
+
+    /** Penalidade das regras N1–N4 da norma. */
+    const penalty = () => {
+      let p = 0
+      let dark = 0
+      const lines = []
+      for (let y = 0; y < size; y++) lines.push(mod[y].map(d => (d ? 1 : 0)).join(''))
+      for (let x = 0; x < size; x++) lines.push(mod.map(row => (row[x] ? 1 : 0)).join(''))
+      for (const s of lines) {
+        for (const m of s.match(/0{5,}|1{5,}/g) || []) p += m.length - 2
+        for (let i = 0; i + 11 <= s.length; i++) {
+          if (s.startsWith('10111010000', i) || s.startsWith('00001011101', i)) p += 40
+        }
+      }
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          if (mod[y][x]) dark++
+          if (x < size - 1 && y < size - 1) {
+            const c = mod[y][x]
+            if (c === mod[y][x + 1] && c === mod[y + 1][x] && c === mod[y + 1][x + 1]) p += 3
+          }
+        }
+      }
+      const total = size * size
+      p += (Math.ceil(Math.abs(dark * 20 - total * 10) / total) - 1) * 10
+      return p
+    }
+
+    let best = 0
+    let min = Infinity
+    for (let m = 0; m < 8; m++) {
+      applyMask(m)
+      formatBits(m)
+      const p = penalty()
+      if (p < min) {
+        min = p
+        best = m
+      }
+      applyMask(m)
+    }
+    applyMask(best)
+    formatBits(best)
+    return mod
+  }
+
+  /**
+   * Desenha a matriz num canvas com zona de silêncio.
+   * @param {HTMLCanvasElement} canvas
+   * @param {boolean[][]} m matriz gerada por encode
+   * @param {number} scale pixels por módulo
+   * @param {number} [border=4] módulos de margem
+   */
+  const draw = (canvas, m, scale, border = 4) => {
+    const n = m.length + border * 2
+    canvas.width = canvas.height = n * scale
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#000'
+    m.forEach((row, y) => row.forEach((d, x) => {
+      if (d) ctx.fillRect((x + border) * scale, (y + border) * scale, scale, scale)
+    }))
+  }
+
+  return { encode, draw }
+})()
+
+/* ============================== PIX (BR Code) ============================== */
+
+/**
+ * Montagem do payload Pix estático conforme Manual de Padrões para Iniciação
+ * do Pix (BCB) — formato EMV MPM com CRC16-CCITT (poly 0x1021, init 0xFFFF).
+ */
+const Pix = (() => {
+  /**
+   * Campo TLV EMV: ID (2) + tamanho (2) + valor.
+   * @param {string} id
+   * @param {string} value
+   * @returns {string}
+   */
+  const tlv = (id, value) => {
+    if (value.length > 99) throw new Error(`Campo ${id} excede 99 caracteres`)
+    return id + String(value.length).padStart(2, '0') + value
+  }
+
+  /**
+   * CRC16-CCITT-FALSE em hexadecimal maiúsculo.
+   * @param {string} s
+   * @returns {string}
+   */
+  const crc16 = s => {
+    let crc = 0xffff
+    for (let i = 0; i < s.length; i++) {
+      crc ^= s.charCodeAt(i) << 8
+      for (let b = 0; b < 8; b++) crc = (crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1) & 0xffff
+    }
+    return crc.toString(16).toUpperCase().padStart(4, '0')
+  }
+
+  /**
+   * Remove acentos e qualquer caractere fora do ASCII imprimível.
+   * @param {string} s
+   * @returns {string}
+   */
+  const ascii = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim()
+
+  /**
+   * Dígitos verificadores de CPF/CNPJ (inclui CNPJ alfanumérico, IN RFB 2.229/2024).
+   * @param {string} doc 11 ou 14 caracteres, maiúsculos
+   * @returns {boolean}
+   */
+  const docOk = doc => {
+    const val = c => c.charCodeAt(0) - 48
+    if (doc.length === 11) {
+      if (/^(\d)\1{10}$/.test(doc)) return false
+      const dv = n => {
+        let s = 0
+        for (let i = 0; i < n; i++) s += val(doc[i]) * (n + 1 - i)
+        const r = (s * 10) % 11
+        return r === 10 ? 0 : r
+      }
+      return dv(9) === val(doc[9]) && dv(10) === val(doc[10])
+    }
+    if (doc.length === 14) {
+      if (/^(\d)\1{13}$/.test(doc) || !/^[A-Z0-9]{12}\d{2}$/.test(doc)) return false
+      const dv = n => {
+        let s = 0
+        for (let i = 0; i < n; i++) s += val(doc[i]) * ((n - 1 - i) % 8 + 2)
+        const r = s % 11
+        return r < 2 ? 0 : 11 - r
+      }
+      return dv(12) === val(doc[12]) && dv(13) === val(doc[13])
+    }
+    return false
+  }
+
+  /**
+   * Sugere o tipo de chave a partir do texto digitado.
+   * @param {string} raw
+   * @returns {'doc'|'tel'|'email'|'evp'|null}
+   */
+  const detect = raw => {
+    const s = raw.trim()
+    if (!s) return null
+    if (s.includes('@')) return 'email'
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)) return 'evp'
+    if (s.startsWith('+')) return 'tel'
+    const alnum = s.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+    if (alnum.length === 14) return 'doc'
+    if (alnum.length === 11 && /^\d+$/.test(alnum)) return docOk(alnum) ? 'doc' : 'tel'
+    if (alnum.length === 13 && alnum.startsWith('55')) return 'tel'
+    return null
+  }
+
+  /**
+   * Normaliza e valida a chave Pix.
+   * @param {string} tipo
+   * @param {string} raw
+   * @returns {string}
+   */
+  const chave = (tipo, raw) => {
+    const s = raw.trim()
+    if (!s) throw new Error('Informe a chave Pix')
+    if (tipo === 'doc') {
+      const d = s.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+      if (d.length !== 11 && d.length !== 14) throw new Error('CPF deve ter 11 dígitos e CNPJ 14')
+      if (!docOk(d)) throw new Error(d.length === 11 ? 'CPF inválido' : 'CNPJ inválido')
+      return d
+    }
+    if (tipo === 'tel') {
+      let d = s.replace(/\D/g, '')
+      if (d.length === 11) d = '55' + d
+      if (!/^55\d{2}9\d{8}$/.test(d)) throw new Error('Celular inválido (DDD + 9 dígitos)')
+      return '+' + d
+    }
+    if (tipo === 'email') {
+      const e = s.toLowerCase()
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) || e.length > 77) throw new Error('E-mail inválido')
+      return e
+    }
+    const e = s.toLowerCase()
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(e)) throw new Error('Chave aleatória inválida')
+    return e
+  }
+
+  /**
+   * Converte valor digitado ("1.234,56", "12,5", "12.50") em "1234.56".
+   * @param {string} raw
+   * @returns {string} vazio quando não informado
+   */
+  const valor = raw => {
+    let s = raw.trim().replace(/^R\$\s*/i, '').replace(/\s/g, '')
+    if (!s) return ''
+    if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.')
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '')
+    if (!/^\d+(\.\d{1,2})?$/.test(s)) throw new Error('Valor inválido')
+    const cents = Math.round(Number(s) * 100)
+    if (cents <= 0) throw new Error('Valor deve ser maior que zero')
+    const out = (cents / 100).toFixed(2)
+    if (out.length > 13) throw new Error('Valor alto demais')
+    return out
+  }
+
+  /**
+   * Monta o payload "Pix copia e cola".
+   * @param {{tipo:string, chave:string, nome:string, cidade:string, valor:string, txid:string, descricao:string}} f
+   * @returns {{payload:string, valor:string, nome:string}}
+   */
+  const build = f => {
+    const key = chave(f.tipo, f.chave)
+    const nome = ascii(f.nome).slice(0, 25)
+    const cidade = ascii(f.cidade).slice(0, 15)
+    if (!nome) throw new Error('Informe o nome do recebedor')
+    if (!cidade) throw new Error('Informe a cidade')
+    const v = valor(f.valor)
+    const txid = f.txid.replace(/[^A-Za-z0-9]/g, '').slice(0, 25) || '***'
+    const desc = ascii(f.descricao)
+
+    let mai = tlv('00', 'br.gov.bcb.pix') + tlv('01', key)
+    if (desc) {
+      const room = 99 - mai.length - 4
+      if (room <= 0) throw new Error('Chave longa demais para incluir descrição')
+      mai += tlv('02', desc.slice(0, room))
+    }
+    let p = tlv('00', '01') + tlv('26', mai) + tlv('52', '0000') + tlv('53', '986')
+    if (v) p += tlv('54', v)
+    p += tlv('58', 'BR') + tlv('59', nome) + tlv('60', cidade) + tlv('62', tlv('05', txid)) + '6304'
+    return { payload: p + crc16(p), valor: v, nome }
+  }
+
+  return { build, detect, crc16 }
+})()
+
+/* ==UI== */
+
+/** Nome da unidade no topo da tela do atendente. */
+const LOJA_NOME = 'The Hutt Burger Freguesia'
+/** Cidade do recebedor (campo 60 do BR Code; não aparece para o cliente). */
+const CIDADE = 'Rio de Janeiro'
+const CAIXAS = [1, 2]
+/** Teto absoluto aceito na configuração (R$ 99.999,99). */
+const TETO_CENTS = 9999999
+
+/** Configuração padrão; o que for salvo na tela ⚙ sobrepõe estes valores. */
+const DEFAULTS = Object.freeze({
+  tipo: 'doc',
+  chave: '23.661.837/0001-87',
+  nomeApp: 'THE HUTT BURGER',
+  banco: 'Banco Inter',
+  maxCents: 100000,
+  prefixoId: 'THBF',
+  prefixoMsg: 'THBF'
+})
+
+const KEYS = { cfg: 'pix-thbf:cfg', pin: 'pix-thbf:pin', pdv: 'pix-thbf:pdv', tema: 'pix-thbf:tema' }
+
+/** localStorage tolerante a navegação privada e armazenamento bloqueado. */
+const store = {
+  get: k => {
+    try { return localStorage.getItem(k) } catch (e) { return null }
+  },
+  set: (k, v) => {
+    try { localStorage.setItem(k, v) } catch (e) { /* sem armazenamento */ }
+  }
+}
+
+const $ = id => document.getElementById(id)
+const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+const NUM = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const valorEl = $('valor')
+
+/**
+ * Lê a configuração salva sobre os padrões.
+ * @returns {typeof DEFAULTS}
+ */
+const loadCfg = () => {
+  try {
+    return { ...DEFAULTS, ...JSON.parse(store.get(KEYS.cfg) || '{}') }
+  } catch (e) {
+    return { ...DEFAULTS }
+  }
+}
+
+let cfg = loadCfg()
+let cents = 0
+/** @type {{payload:string, msg:string, txid:string, matrix:boolean[][], valor:string}|null} */
+let state = null
+
+/* ---------- caixa (PDV) ---------- */
+
+/**
+ * Caixa deste aparelho: ?pdv=N na URL tem prioridade, depois o último escolhido.
+ * @returns {number}
+ */
+const loadPdv = () => {
+  const fromUrl = Number(new URLSearchParams(location.search).get('pdv'))
+  if (CAIXAS.includes(fromUrl)) return fromUrl
+  const saved = Number(store.get(KEYS.pdv))
+  return CAIXAS.includes(saved) ? saved : CAIXAS[0]
+}
+let pdv = loadPdv()
+
+/** Desenha o seletor de caixa e marca o ativo. */
+const renderPdv = () => {
+  const box = $('pdv')
+  box.innerHTML = ''
+  for (const n of CAIXAS) {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.textContent = `Caixa ${n}`
+    b.className = n === pdv ? 'on' : ''
+    b.addEventListener('click', () => {
+      pdv = n
+      store.set(KEYS.pdv, String(n))
+      renderPdv()
+      update()
+    })
+    box.appendChild(b)
+  }
+}
+
+/* ---------- cobrança ---------- */
+
+/**
+ * Referências de controle (hora local do aparelho, valor em centavos, mín. 3 dígitos):
+ *  - mensagem (26-02): THBF-PDV1-20261005-040029-001  → data, hora e valor
+ *  - txid (62-05):     THBF120261005001               → só [A-Za-z0-9], máx. 25
+ * @param {Date} d
+ * @param {number} c centavos
+ * @param {typeof DEFAULTS} conf
+ * @returns {{msg:string, txid:string}}
+ */
+const makeRef = (d, c, conf) => {
+  const p = n => String(n).padStart(2, '0')
+  const data = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
+  const hora = `${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+  const valor = String(c).padStart(3, '0')
+  return {
+    msg: `${conf.prefixoMsg}-PDV${pdv}-${data}-${hora}-${valor}`,
+    txid: `${conf.prefixoId}${pdv}${data}${valor}`
+  }
+}
+
+/**
+ * Monta e valida o payload completo de uma cobrança.
+ * @param {number} c centavos
+ * @param {Date} d instante do carimbo
+ * @param {typeof DEFAULTS} [conf=cfg]
+ * @returns {{payload:string, msg:string, txid:string}}
+ */
+const buildCharge = (c, d, conf = cfg) => {
+  const { msg, txid } = makeRef(d, c, conf)
+  if (txid.length > 25) throw new Error(`Identificador com ${txid.length} caracteres (máx. 25)`)
+  const { payload } = Pix.build({
+    tipo: conf.tipo, chave: conf.chave, nome: conf.nomeApp, cidade: CIDADE,
+    valor: (c / 100).toFixed(2), txid, descricao: msg
+  })
+  if (!payload.includes(msg)) throw new Error('Mensagem longa demais para esta chave')
+  return { payload, msg, txid }
+}
+
+/**
+ * Regera payload e QR com o horário atual.
+ * @param {string} [note] aviso a exibir se não houver erro
+ */
+const update = (note = '') => {
+  state = null
+  let err = ''
+  if (cents > 0) {
+    try {
+      const r = buildCharge(cents, new Date())
+      state = { ...r, matrix: QR.encode(r.payload), valor: (cents / 100).toFixed(2) }
+      QR.draw($('qr'), state.matrix, 6)
+    } catch (e) {
+      err = e.message
+    }
+  }
+  $('erro').textContent = err || note
+  $('preview').classList.toggle('ok', !!state)
+  $('code').textContent = state ? state.payload : ''
+  $('ref').textContent = state ? state.msg : '—'
+  $('refId').textContent = state ? state.txid : '—'
+  $('live').textContent = state ? `✓ QR Code de ${BRL.format(cents / 100)} pronto` : ''
+  for (const id of ['apresentar', 'copiar', 'png']) $(id).disabled = !state
+  $('limpar').hidden = cents === 0
+  if (tela() === 'cliente') refreshCliente()
+}
+
+/** Redesenha a tela do cliente com o estado atual. */
+const refreshCliente = () => {
+  if (!state) return
+  QR.draw($('bigqr'), state.matrix, 10)
+  $('cv').textContent = BRL.format(cents / 100)
+  $('bigcode').textContent = state.payload
+  $('bigref').textContent = state.msg
+}
+
+/**
+ * Relógio: regera o QR na virada de cada segundo, para a mensagem registrar o
+ * momento da leitura/cópia pelo cliente, e não o da digitação.
+ */
+const tick = () => {
+  if (cents > 0 && tela() !== 'config') update()
+  setTimeout(tick, 1000 - (Date.now() % 1000) + 5)
+}
+
+/* ---------- campo de valor (máscara de centavos) ---------- */
+
+/** Mantém o cursor no fim: na máscara de centavos a posição não importa. */
+const caretToEnd = () => {
+  const end = valorEl.value.length
+  try { valorEl.setSelectionRange(end, end) } catch (e) { /* campo sem foco */ }
+}
+
+/**
+ * Atualiza o campo e regera o QR.
+ * @param {string} [note]
+ */
+const showValor = (note = '') => {
+  valorEl.value = BRL.format(cents / 100)
+  valorEl.classList.toggle('zero', cents === 0)
+  caretToEnd()
+  update(note)
+}
+
+const limiteMsg = () => `Limite por cobrança: ${BRL.format(cfg.maxCents / 100)}`
+
+/**
+ * Empurra um dígito pela direita (5 → 0,05 → 50 → 0,50 …), como em maquininha.
+ * @param {string} d dígito 0–9
+ * @returns {boolean} false se ultrapassaria o limite
+ */
+const pushDigit = d => {
+  const next = cents * 10 + Number(d)
+  if (next > cfg.maxCents) return false
+  cents = next
+  return true
+}
+
+/** Backspace remove o último dígito; com tudo selecionado ou Ctrl/⌘, zera. */
+const backspace = all => {
+  cents = all ? 0 : Math.floor(cents / 10)
+}
+
+/** @returns {boolean} true se o texto inteiro do campo está selecionado */
+const allSelected = () => valorEl.selectionStart === 0 && valorEl.selectionEnd === valorEl.value.length && valorEl.value.length > 0
+
+/**
+ * Converte texto em centavos: "50,00", "1.000" e "50.5" são reais.
+ * @param {string} text
+ * @returns {number} NaN se inválido
+ */
+const parseReais = text => {
+  let s = String(text).replace(/R\$|\s/g, '')
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.')
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '')
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return NaN
+  return Math.round(Number(s) * 100)
+}
+
+/**
+ * Texto colado: com separador decimal vira reais; só dígitos vira centavos.
+ * @param {string} text
+ * @returns {number}
+ */
+const parsePaste = text => {
+  const s = text.trim()
+  if (/[.,]\d{1,2}$/.test(s)) return parseReais(s) || 0
+  return Number(s.replace(/\D/g, '') || 0)
+}
+
+/**
+ * Aplica um valor colado respeitando o limite.
+ * @param {string} text
+ * @returns {string} aviso
+ */
+const pasteValue = text => {
+  const c = parsePaste(text)
+  if (c > cfg.maxCents) return limiteMsg()
+  cents = c
+  return ''
+}
+
+const NAV_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']
+
+/**
+ * Teclado físico: só dígitos, Backspace, Delete e Enter; setas e outros
+ * caracteres são bloqueados. Atalhos (Ctrl/⌘ + C/V/A) e Tab passam.
+ * @param {KeyboardEvent} e
+ */
+const onKeyDown = e => {
+  const k = e.key
+  const mod = e.ctrlKey || e.metaKey
+  let note = ''
+  if (/^\d$/.test(k) && !mod) {
+    if (allSelected()) cents = 0
+    if (!pushDigit(k)) note = limiteMsg()
+  } else if (k === 'Backspace') backspace(mod || e.altKey || allSelected())
+  else if (k === 'Delete') backspace(true)
+  else if (k === 'Enter') return void (e.preventDefault(), apresentar())
+  else if (NAV_KEYS.includes(k)) return void e.preventDefault()
+  else if (k.length === 1 && !mod) return void e.preventDefault()
+  else return
+  e.preventDefault()
+  showValor(note)
+}
+
+/**
+ * Teclado virtual (Android envia keydown "Unidentified") e colagem.
+ * @param {InputEvent} e
+ */
+const onBeforeInput = e => {
+  const t = e.inputType || ''
+  let note = ''
+  if (t === 'deleteContentBackward') {
+    backspace(allSelected())
+  } else if (t.startsWith('delete')) {
+    backspace(true)
+  } else if (t === 'insertFromPaste' || t === 'insertFromDrop') {
+    note = pasteValue(e.data || (e.dataTransfer && e.dataTransfer.getData('text')) || '')
+  } else if (t === 'insertText' || t === 'insertReplacementText') {
+    if (allSelected()) cents = 0
+    for (const d of (e.data || '').replace(/\D/g, '')) if (!pushDigit(d)) note = limiteMsg()
+  } else if (t !== 'insertLineBreak') {
+    return
+  }
+  e.preventDefault()
+  showValor(note)
+}
+
+/** Fallback para navegadores sem beforeinput: relê os dígitos do campo. */
+const onInput = () => {
+  const c = Number(valorEl.value.replace(/\D/g, '') || 0)
+  const over = c > cfg.maxCents
+  if (!over) cents = c
+  showValor(over ? limiteMsg() : '')
+}
+
+/** Zera o valor e devolve o foco ao campo. */
+const limpar = () => {
+  cents = 0
+  showValor()
+  valorEl.focus()
+}
+
+/* ---------- telas ---------- */
+
+/** @returns {'atendente'|'cliente'|'config'} */
+const tela = () => document.body.dataset.tela
+
+/**
+ * Troca de tela. A animação de entrada reinicia sozinha porque a seção passa
+ * de display:none para visível.
+ * @param {'atendente'|'cliente'|'config'} t
+ */
+const go = t => {
+  document.body.dataset.tela = t
+  window.scrollTo(0, 0)
+}
+
+/** Abre a tela do cliente com o QR atual. */
+const apresentar = () => {
+  if (!state) return
+  valorEl.blur()
+  go('cliente')
+  update()
+}
+
+/** Volta ao atendente com o valor selecionado: o próximo dígito começa do zero. */
+const voltar = () => {
+  go('atendente')
+  valorEl.focus()
+  valorEl.setSelectionRange(0, valorEl.value.length)
+}
+
+/* ---------- configuração ---------- */
+
+/**
+ * Rótulo da chave para o cliente ("Chave CNPJ", "Chave celular"…).
+ * @param {typeof DEFAULTS} c
+ * @returns {string}
+ */
+const tipoLabel = c => {
+  if (c.tipo === 'doc') return c.chave.replace(/[^A-Za-z0-9]/g, '').length === 11 ? 'Chave CPF' : 'Chave CNPJ'
+  return { tel: 'Chave celular', email: 'Chave e-mail', evp: 'Chave aleatória' }[c.tipo] || 'Chave Pix'
+}
+
+/** Propaga a configuração para todas as telas. */
+const applyCfg = () => {
+  document.querySelectorAll('[data-f]').forEach(n => {
+    const f = n.dataset.f
+    n.textContent = f === 'tipo' ? tipoLabel(cfg) : cfg[f]
+  })
+  $('maxInfo').textContent = `máx. ${BRL.format(cfg.maxCents / 100)}`
+  $('aviso').textContent = `Antes de confirmar, verifique se o app do seu banco mostra ${cfg.nomeApp} e ${cfg.banco}.`
+  if (cents > cfg.maxCents) cents = 0
+  showValor()
+}
+
+const form = {
+  tipo: $('cTipo'), chave: $('cChave'), nomeApp: $('cNome'), banco: $('cBanco'),
+  max: $('cMax'), prefixoId: $('cPid'), prefixoMsg: $('cPmsg'), pin: $('cPin')
+}
+
+/**
+ * Preenche o formulário.
+ * @param {typeof DEFAULTS} c
+ */
+const fillForm = c => {
+  form.tipo.value = c.tipo
+  form.chave.value = c.chave
+  form.nomeApp.value = c.nomeApp
+  form.banco.value = c.banco
+  form.max.value = NUM.format(c.maxCents / 100)
+  form.prefixoId.value = c.prefixoId
+  form.prefixoMsg.value = c.prefixoMsg
+  form.pin.value = ''
+  preview()
+}
+
+/** @returns {typeof DEFAULTS} rascunho a partir do formulário */
+const readForm = () => ({
+  tipo: form.tipo.value,
+  chave: form.chave.value.trim(),
+  nomeApp: form.nomeApp.value.trim(),
+  banco: form.banco.value.trim(),
+  maxCents: parseReais(form.max.value),
+  prefixoId: form.prefixoId.value.trim(),
+  prefixoMsg: form.prefixoMsg.value.trim()
+})
+
+/**
+ * Valida o rascunho gerando uma cobrança real no pior caso (valor máximo).
+ * @param {typeof DEFAULTS} c
+ */
+const validate = c => {
+  if (!c.nomeApp) throw new Error('Informe o nome que aparece no app')
+  if (!c.banco) throw new Error('Informe o banco')
+  if (!(c.maxCents > 0) || c.maxCents > TETO_CENTS) throw new Error('Valor máximo entre R$ 0,01 e R$ 99.999,99')
+  if (!/^[A-Za-z0-9]{1,8}$/.test(c.prefixoId)) throw new Error('Prefixo do identificador: 1 a 8 letras ou números')
+  if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,11}$/.test(c.prefixoMsg)) throw new Error('Prefixo da mensagem: letras, números e hífen')
+  buildCharge(c.maxCents, new Date(), c)
+}
+
+/** Atualiza o exemplo e o aviso enquanto o formulário é editado. */
+const preview = () => {
+  const msgEl = $('cfgMsg')
+  msgEl.className = 'msg'
+  try {
+    const c = readForm()
+    validate(c)
+    const r = makeRef(new Date(), Math.min(5000, c.maxCents), c)
+    $('exMsg').textContent = r.msg
+    $('exId').textContent = r.txid
+    msgEl.textContent = ''
+  } catch (e) {
+    $('exMsg').textContent = '—'
+    $('exId').textContent = '—'
+    msgEl.textContent = e.message
+  }
+}
+
+/**
+ * Hash do PIN (SHA-256 quando disponível). Proteção contra curiosos, não contra
+ * quem apaga os dados do navegador.
+ * @param {string} text
+ * @returns {Promise<string>}
+ */
+const hashPin = async text => {
+  const data = new TextEncoder().encode(`pix-thbf:${text}`)
+  if (window.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', data)
+    return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join('')
+  }
+  let h = 0x811c9dc5
+  for (const b of data) h = Math.imul(h ^ b, 0x01000193) >>> 0
+  return `fnv${h.toString(16)}`
+}
+
+/** Abre a configuração; com PIN definido, mostra primeiro o bloqueio. */
+const openConfig = () => {
+  const locked = !!store.get(KEYS.pin)
+  fillForm(cfg)
+  $('lock').hidden = !locked
+  $('cfgForm').hidden = locked
+  $('pinIn').value = ''
+  $('pinMsg').textContent = ''
+  if (!locked) {
+    $('cfgMsg').className = 'msg info'
+    $('cfgMsg').textContent = 'Primeiro acesso: crie um PIN para proteger esta tela.'
+  }
+  valorEl.blur()
+  go('config')
+  if (locked) $('pinIn').focus()
+}
+
+/** Confere o PIN digitado. */
+const unlock = async () => {
+  const ok = (await hashPin($('pinIn').value.trim())) === store.get(KEYS.pin)
+  $('pinIn').value = ''
+  if (!ok) {
+    $('pinMsg').textContent = 'PIN incorreto'
+    return
+  }
+  $('lock').hidden = true
+  $('cfgForm').hidden = false
+}
+
+/**
+ * Salva a configuração validada.
+ * @param {SubmitEvent} e
+ */
+const saveConfig = async e => {
+  e.preventDefault()
+  const msgEl = $('cfgMsg')
+  msgEl.className = 'msg'
+  try {
+    const draft = readForm()
+    validate(draft)
+    const pin = form.pin.value.trim()
+    if (pin && !/^\d{4,8}$/.test(pin)) throw new Error('PIN: 4 a 8 dígitos')
+    if (!pin && !store.get(KEYS.pin)) throw new Error('Crie um PIN para proteger esta tela')
+    if (pin) store.set(KEYS.pin, await hashPin(pin))
+    cfg = draft
+    store.set(KEYS.cfg, JSON.stringify(cfg))
+    applyCfg()
+    voltar()
+  } catch (err) {
+    msgEl.textContent = err.message
+  }
+}
+
+/* ---------- copiar / compartilhar / PNG ---------- */
+
+/**
+ * Copia texto; no iOS o fallback precisa de setSelectionRange.
+ * @param {string} text
+ * @returns {Promise<boolean>}
+ */
+const copyText = async text => {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch (e) {
+    const t = document.createElement('textarea')
+    t.value = text
+    t.setAttribute('readonly', '')
+    t.style.position = 'fixed'
+    t.style.opacity = '0'
+    document.body.appendChild(t)
+    t.focus()
+    t.setSelectionRange(0, text.length)
+    const ok = document.execCommand('copy')
+    t.remove()
+    return ok
+  }
+}
+
+/**
+ * Liga um botão de cópia com feedback visual.
+ * @param {HTMLButtonElement} btn
+ */
+const bindCopy = btn => {
+  const label = btn.textContent
+  btn.addEventListener('click', async () => {
+    if (!state) return
+    const ok = await copyText(state.payload)
+    btn.textContent = ok ? 'Copiado ✓' : 'Toque no código e copie'
+    setTimeout(() => { btn.textContent = label }, 1800)
+  })
+}
+
+/**
+ * PNG com valor, QR, recebedor e mensagem (para enviar no delivery).
+ * @returns {HTMLCanvasElement}
+ */
+const cartaoPng = () => {
+  const qr = document.createElement('canvas')
+  QR.draw(qr, state.matrix, 12)
+  const w = Math.max(qr.width, 560)
+  const top = 110
+  const c = document.createElement('canvas')
+  c.width = w
+  c.height = top + qr.height + 175
+  const ctx = c.getContext('2d')
+  const font = '-apple-system, system-ui, "Segoe UI", Roboto, sans-serif'
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, c.width, c.height)
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#0b8f7a'
+  ctx.font = `700 22px ${font}`
+  ctx.fillText('PAGAMENTO VIA PIX', w / 2, 40)
+  ctx.fillStyle = '#15171a'
+  ctx.font = `800 46px ${font}`
+  ctx.fillText(BRL.format(cents / 100), w / 2, 92)
+  ctx.drawImage(qr, (w - qr.width) / 2, top)
+  const y = top + qr.height + 30
+  ctx.font = `700 24px ${font}`
+  ctx.fillText(cfg.nomeApp, w / 2, y)
+  ctx.fillStyle = '#6b7280'
+  ctx.font = `400 20px ${font}`
+  ctx.fillText(`${tipoLabel(cfg)} ${cfg.chave}`, w / 2, y + 34)
+  ctx.fillText(cfg.banco, w / 2, y + 64)
+  ctx.font = '400 16px ui-monospace, Menlo, monospace'
+  ctx.fillText(state.msg, w / 2, y + 100)
+  return c
+}
+
+/** Baixa o PNG (no iPhone abre a folha de download/compartilhamento). */
+const baixarPng = () => {
+  if (!state) return
+  const a = document.createElement('a')
+  a.href = cartaoPng().toDataURL('image/png')
+  a.download = `${state.msg}.png`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
+/* ---------- tema (teste manual; depois vira automático por horário) ---------- */
+
+/**
+ * Aplica o tema e ajusta a barra do navegador.
+ * @param {'light'|'dark'} t
+ */
+const setTheme = t => {
+  document.documentElement.dataset.theme = t
+  document.querySelector('meta[name="theme-color"]').content = t === 'dark' ? '#0f1114' : '#ffffff'
+  $('tema').textContent = t === 'dark' ? '☀ Claro' : '☾ Escuro'
+  store.set(KEYS.tema, t)
+}
+
+/* ---------- ligações ---------- */
+
+valorEl.addEventListener('keydown', onKeyDown)
+valorEl.addEventListener('beforeinput', onBeforeInput)
+valorEl.addEventListener('input', onInput)
+for (const ev of ['focus', 'click', 'mouseup', 'touchend']) {
+  valorEl.addEventListener(ev, () => { if (!allSelected()) setTimeout(caretToEnd, 0) })
+}
+
+$('apresentar').addEventListener('click', apresentar)
+$('fechar').addEventListener('click', voltar)
+$('limpar').addEventListener('click', limpar)
+$('png').addEventListener('click', baixarPng)
+bindCopy($('copiar'))
+bindCopy($('copiar2'))
+$('tema').addEventListener('click', () => {
+  setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
+})
+
+$('engrenagem').addEventListener('click', openConfig)
+$('cfgFechar').addEventListener('click', voltar)
+$('pinOk').addEventListener('click', unlock)
+$('pinIn').addEventListener('keydown', e => { if (e.key === 'Enter') unlock() })
+$('cfgForm').addEventListener('submit', saveConfig)
+$('cfgForm').addEventListener('input', preview)
+form.chave.addEventListener('input', () => {
+  const t = Pix.detect(form.chave.value)
+  if (t) form.tipo.value = t
+})
+$('cfgReset').addEventListener('click', () => {
+  fillForm(DEFAULTS)
+  if (!$('cfgMsg').textContent) {
+    $('cfgMsg').className = 'msg info'
+    $('cfgMsg').textContent = 'Padrão carregado. Toque em Salvar para aplicar.'
+  }
+})
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && tela() !== 'atendente') voltar()
+})
+
+if (navigator.share) {
+  $('enviar').hidden = false
+  $('enviar').addEventListener('click', () => {
+    if (state) navigator.share({ text: state.payload }).catch(() => {})
+  })
+}
+
+$('lojaNome').textContent = LOJA_NOME
+setTheme(store.get(KEYS.tema) === 'dark' ? 'dark' : 'light')
+renderPdv()
+applyCfg()
+tick()
+valorEl.focus()
+</script>
+</body>
+</html>
